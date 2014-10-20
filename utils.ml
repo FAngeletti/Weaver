@@ -3,13 +3,19 @@ let window = Js.Unsafe.variable "window"
 
 let insertFirst p e = Dom.insertBefore p e @@ p##firstChild
 
-let node_iter nl f =
+
+let nodelike_iter extract nl f = 
   let n = nl##length in
   for k=0 to n-1 do
-    match Js.Opt.to_option nl##item(k) with
+    match extract nl##item(k) with
     | Some x -> f x 
     | None -> ()  
   done 
+ 
+
+let node_iter nl f = nodelike_iter Js.Opt.to_option nl f
+
+let classes_iter nl f = nodelike_iter Js.Optdef.to_option nl f
 
 
 let node_fold f start nl=

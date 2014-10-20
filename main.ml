@@ -23,20 +23,37 @@ let consume_childs element f =
   feed()
 
 
+
+let transfer_attrs origin target = 
+  let t_attrs = target##attributes in 
+  let clone attr = Dom.CoerceTo.attr attr##cloneNode(Js._false) in
+  let transfer attr = 
+    Js.Opt.iter (clone attr) @@ fun attr -> ignore @@ t_attrs##setNamedItem(attr) in
+  Utils.node_iter origin##attributes transfer; target
+
+let transfer_classes origin target = 
+  Utils.classes_iter (origin##classList) (fun c ->  target##classList##add(c) |> ignore );
+  target
+
+let transfer_childs origin target  = 
+  let transfer child = target##appendChild(child) |> ignore in 
+  consume_childs origin transfer; target 
+
+let parent_or_root element = 
+  let node = (element :> Dom.node Js.t) in
+  Js.Opt.get (node##parentNode) (fun () -> (root :> Dom.node Js.t)  )  
+
 let replace_tag_name tagname classlist (element:Dom_html.element Js.t) =
-  let parent = Js.Opt.get (element##parentNode ) (fun () -> (root :> Dom.node Js.t)  ) 
-    and fae = Dom_html.document##createElement(tagname)
-    and attributes = element##attributes in
-   let mirror = fae##attributes in 
-   let transfer (attribute : Dom.attr Js.t) = 
-     let clone  = Js.coerce  ( attribute##cloneNode(Js._false) )  Dom.CoerceTo.attr (fun _ -> assert false ) in
-     ignore @@ mirror##setNamedItem(clone) in
-   let () = 
-     consume_childs element (fun child -> ignore @@ fae##appendChild(child) ) ;
-     Utils.node_iter attributes transfer;
-     List.iter (fun c -> fae##classList##add(Js.string c)) classlist; 
-     ignore @@ parent##replaceChild( (fae :> Dom.node Js.t) , (element :> Dom.node Js.t) ) in 
-   fae
+  let fae= document##createElement(tagname) in
+  let fae = fae 
+  |> transfer_attrs element 
+  |> transfer_classes element
+  |> transfer_childs element in
+  List.iter (fun c -> fae##classList##add(Js.string c)) classlist; 
+  let parent = parent_or_root element in 
+  Dom.replaceChild parent fae element;
+  fae
+
 
 
 
@@ -179,19 +196,17 @@ let flow_event_to past target future test action =
     | l -> past, l in
   move past future
 
-let jstatus = Js.string "data-status"
-
 let reverse_action = function 
   | Activate -> Desactivate
   | Desactivate -> Activate 
 
 let apply_event e = match e.action with 
-  | Activate -> e.node##setAttribute(jstatus,jact)
-  | Desactivate -> e.node##setAttribute(jstatus, jdis)
+  | Activate -> e.node##classList##remove(jdis)
+  | Desactivate -> e.node##classList##add(jdis)
 
 
 let clear_status slide = 
-  let clear element attr () = element##setAttribute(jstatus,jdis) in
+  let clear element attr () = element##classList##add(jdis) in
   fold_attribute jtime clear () slide  
 
 
@@ -250,7 +265,7 @@ let incr_time () = match !event_list with
   | _ -> advance_events () 
 
 let decr_time () = match !event_list with 
-  | [] ,_, _ -> seq_ [drop;decr_slide;pick]
+  | _ ,0, _ -> seq_ [drop;decr_slide;pick]
   | _ -> reverse_events () 
 
 
