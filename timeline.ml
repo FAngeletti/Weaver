@@ -1,0 +1,238 @@
+
+
+(**
+Timeline grammar : 
+
+ timeline := element timeline_queue
+ element := tags:timegroup
+ tags := tag tag_queue 
+ tag_queue := 
+   | µ 
+   | + tags
+ timeline_queue := 
+   | µ
+   | + timeline
+ timegroup := 
+   | time 
+   | [ time_list ]
+ time_list := 
+   | time time_list_queue
+ time_list_queue :=
+   | µ
+   | + time_list
+ time := int time_queue
+ time_queue:=
+   | - int  
+   | ..
+   | µ
+*)
+
+let window=Js.Unsafe.variable "window"
+
+let digit c = (int_of_char c) -48 
+			      
+let parse_error s =
+  window##alert(Js.string s)
+
+let unexpected_end s=
+  parse_error @@ Printf.sprintf "Unexpected end when parsing %s" s
+
+let expected_char c s =   parse_error @@ Printf.sprintf "Expected [%c] character when parsing %s" c s
+
+				
+let unexpected_char c s=
+  parse_error @@ Printf.sprintf "Unexpected [%c] character when parsing %s" c s
+
+let unexpected c s = 
+  match c with 
+  | None -> unexpected_end s
+  | Some c -> unexpected_char c s
+
+type interval = 
+ | Interval of int*int 
+ | Point of int 
+ | Right of int
+
+type tag = string
+
+type signal = { domain : interval list ; tags : tag list }
+let default_tag = "activate"
+
+
+let print signals=
+  let sp = Printf.sprintf in
+  let sprint_interval = function
+    | Point p -> sp "Point %d" p
+    | Interval (s,e) -> sp "Interval %d-%d" s e
+    | Right r -> sp "Right %d.." r in
+  let sprint_intervals is = is |> List.map sprint_interval   |> String.concat "+" in  
+  let sprint_tags tags = String.concat "," tags in
+  let print_signal s =
+    let s = Printf.sprintf "Times:[%s], tags:[%s]" (sprint_intervals s.domain) (sprint_tags s.tags) in
+    window##alert(Js.string s ) in  
+  List.iter print_signal signals 
+
+		     
+let parse s =
+  let n = String.length s-1 in
+  let pos = ref 0 in
+  let token =
+    fun () -> let p = !pos in
+	      if p> n then None else (incr pos; Some s.[p]) in
+  let undo () = decr pos in
+  let ( |>| ) f g = let a = f () in a ::g () in
+  let ( >>> ) f g=  let a= f ()  in g a in    
+  let rec parse_timeline ()=  parse_signal |>|  parse_union
+  and parse_signal () =
+    parse_tags >>> ( fun tags -> 
+     { tags; domain = parse_timegroup() } 
+    ) 
+  and parse_timegroup () = match token () with
+    | Some('[') -> parse_time_list () 
+    | c -> undo () ; [ parse_interval () ] 
+  and parse_time_list () = parse_interval |>| parse_time_list_queue
+  and parse_time_list_queue () = match token () with
+    | Some('+') -> parse_time_list () 
+    | Some(']') -> []
+    | c  -> unexpected c "time interval list"
+  and parse_tags () = match token () with
+    | Some('[') |Some ( '0'..'9' ) -> undo(); [default_tag]
+    | _ -> undo();  parse_tag (Buffer.create 20) |>| parse_tags_queue 
+  and parse_tag b ()= match token() with
+    | Some('a'..'z' as c ) -> Buffer.add_char b c; parse_tag b () 
+    | Some('+') -> undo(); Buffer.contents b
+    | Some(':') -> undo(); Buffer.contents b
+    | c -> unexpected c "tag"    
+  and parse_tags_queue () = match token () with
+    | Some('+') -> parse_tags()
+    | Some(':') -> []
+    | c -> unexpected c "tag queue" 
+  and parse_interval () = (parse_int 0) >>> parse_r_interval
+  and parse_r_interval ns = match token () with
+    | Some('-') -> parse_int 0 >>> fun n -> Interval (ns, n )
+    | Some('.') -> 
+       let tok = token () in
+       if tok = Some('.') then  Right ns else parse_error @@ Printf.sprintf "Expected character [.] in timeline %s at position %d " s !pos
+    | None -> Point ns  
+    | _  ->  undo(); Point ns 
+  and parse_int n ()= match token () with
+    | Some('0'..'9' as c) ->  parse_int ( n*10 + digit c ) ()
+    | None ->  n
+    | _ -> undo(); n
+  and parse_union () = match token () with
+    | Some('+') -> parse_timeline ()  
+    | None -> []
+    | Some(c) -> parse_error @@ Printf.sprintf "Unexpected [%c] character while parsing timeline %s" c s in
+  parse_timeline ()
+  
+		 
+let ( <? ) x is = 
+  let x_is_in = function
+    | Point p -> x=p
+    | Right p -> x>=p
+    | Interval (s,e) -> x>=s && x<=e in
+  List.fold_left (fun t i -> t || x_is_in i ) false is   
+
+let upper_time is  = 
+  let upper = function
+    | Point p-> p
+    | Right p -> 0
+    | Interval(s,e) -> e in
+List.fold_left (fun u i -> max u @@ upper i ) 0 is 
+
+	       
+type status = Activate| Desactivate
+
+
+type  event = {time:int;action:status; ev_tags : tag list;  node: Dom_html.element Js.t}
+
+let jtime = Js.string "timeline"
+let jdis = Js.string "disactivated"
+let jact = Js.string "activated"
+
+
+
+let construct_chronology slide= 
+  let blink n ev_tags start ending events = 
+    {time=ending+1; action=Desactivate; ev_tags; node  = n }
+    ::{time = start; action=Activate; ev_tags;  node = n} :: events in
+  let add_interval n tags events = function 
+    | Point p -> blink n tags p p events
+    | Interval (s,e) -> blink n tags s e events
+    | Right s -> {time=s;action=Activate; ev_tags= tags; node = n} ::events in
+  let add_signal n events (signal:signal) = 
+    List.fold_left (add_interval n signal.tags) events signal.domain in
+  let add_timeline n attr events  = 
+    let timeline = parse @@ Js.to_string attr in
+    List.fold_left (add_signal n) events timeline in
+  let events = Utils.fold_attribute jtime add_timeline [] slide in
+  let compare_event ev1 ev2 = compare ev1.time ev2.time in
+  List.sort compare_event events
+
+		     
+let save_ast slide =
+  let construct element attr =
+    let tml = attr |> Js.to_string |> parse in
+    element##setAttribute(Js.string "tml_ast", Js.string @@  Marshal.to_string tml [] ) in
+  Utils.iter_attribute jtime construct (slide :> Dom.node Js.t ); slide 
+
+
+let tml_marker= "tmln_"
+
+let marker_on tag = 
+  Js.string ( tml_marker  ^ tag^"_on"  ) 
+let marker_off tag =
+  Js.string( tml_marker ^ tag ^ "_off") 
+
+let tags signals=
+  let fold_sign tags signal =  List.fold_left (fun  l x -> x::l) tags signal.tags  in
+  signals
+  |> List.fold_left fold_sign []
+  |> List.sort_uniq (compare:string->string->int) 
+		    
+
+let prepare_events_tags slide  =
+  let prepare_et node  attr ()=
+    let cl = node##classList in
+    Js.to_string attr |> parse |> tags |>
+      List.iter (fun tag -> cl##add(marker_off tag); cl##remove(marker_on tag) ) in
+  Utils.fold_attribute jtime prepare_et () slide
+	   
+	   
+let clear_status slide =
+  let clear_cl cl c =
+    let s= Js.to_string c in 
+    if Utils.is_prefix tml_marker s then cl##remove(c) in
+  let clear element attr = 
+    let cl = element##classList in
+    Utils.classes_consume cl ( clear_cl cl) in
+  Utils.iter_attribute jtime clear slide  
+
+				  
+let flow_event_to past target future test action = 
+  let rec move past = function 
+    | [] -> past, []
+    | a::q when test a.time target -> action a; move (a::past) q
+    | l -> past, l in
+  move past future
+
+let reverse_action = function 
+  | Activate -> Desactivate
+  | Desactivate -> Activate 
+
+let apply_tag_event e tag  =
+  let cl = e.node##classList in 
+  match e.action with
+  | Activate  -> (
+     cl##add(marker_on tag);
+     cl##remove(marker_off tag) ) 
+  | Desactivate ->(
+     cl##remove(marker_on tag);
+     cl##add(marker_off tag)
+  )
+
+let apply_event e =
+  List.iter (apply_tag_event e) e.ev_tags
+
+	   
+let reverse_event e = apply_event { e with action = reverse_action e.action } 
