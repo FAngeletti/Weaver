@@ -52,10 +52,10 @@ let split_string sep s =
     try Some  (String.index_from s pos sep) with 
     | Not_found -> None  in
   let rec split_all l pos= 
-    let sub len = String.sub s pos len in
+    let sub ende = String.sub s pos (ende-pos) in
     match split pos with
-  | None -> sub (n - pos) :: l  
-  | Some p -> split_all ( sub (pos-p-1)::l) (p+1) in
+  | None -> sub n :: l  
+  | Some p -> split_all ( sub p::l) (p+1) in
   List.rev @@ split_all [] 0
 
 (** Iteration on attributes *)
@@ -86,14 +86,12 @@ let get_or_create name =
 let insertFirst p e = Dom.insertBefore p e @@ p##firstChild
     
 let transfer_attrs origin target = 
-  let t_attrs = target##attributes in 
-  let clone attr = Dom.CoerceTo.attr attr##cloneNode(Js._false) in
-  let transfer attr = 
-    Js.Opt.iter (clone attr) @@ fun attr -> ignore @@ t_attrs##setNamedItem(attr) in
+  let transfer attr =  target##setAttribute(attr##name,attr##value) in
   node_iter origin##attributes transfer; target
 
 let transfer_classes origin target = 
-  classes_iter (origin##classList) (fun c ->  target##classList##add(c) |> ignore );
+  let clt = target##classList in
+  classes_iter (origin##classList) (fun c ->  clt##add(c) |> ignore );
   target
 
 let transfer_childs origin target  = 

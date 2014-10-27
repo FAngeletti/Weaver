@@ -6,15 +6,6 @@ let window = Js.Unsafe.variable "window"
 let root =  Utils.get_or_create "html" 
 let body = Utils.get_or_create "body"
 
-			 (*
-let consume_childs element f =
-  let next () = Js.Opt.to_option @@ element ## firstChild in
-  let rec feed ()= match next() with
-    | Some c -> f c; feed () 
-    | None -> () in
-  feed()
-			  *)
-
 
 let parent_or_root element = 
   let node = (element :> Dom.node Js.t) in
@@ -22,7 +13,7 @@ let parent_or_root element =
 
 let create_slide () =
   let slide = document##createElement(Js.string "article")  in
-  slide##classList##add(Js.string "slide");
+  slide##classList##add(Js.string "slide"); 
   slide
 
 let create_slide_interior () = 
@@ -40,11 +31,10 @@ let encapsulate new_father element =
 let translate_slide raw_slide =
   let slide = create_slide () in
   let slide_interior = create_slide_interior () in
-  let slide = slide  
-  |> Utils.transfer_attrs raw_slide 
-  |> Utils.transfer_classes raw_slide 
-  and slide_interior = slide_interior |> Utils.transfer_childs raw_slide
-  and parent = parent_or_root raw_slide in 
+  let slide = Utils.transfer_attrs raw_slide slide in
+  let slide_interior = slide_interior |> Utils.transfer_childs raw_slide
+  and parent = parent_or_root raw_slide in
+  slide##classList##add(Js.string "slide");
   slide##appendChild((slide_interior:> Dom.node Js.t) ) |> ignore;  
   Dom.replaceChild parent slide raw_slide; 
   slide
@@ -83,16 +73,39 @@ let prepare_slides slides =
 let slides = document##getElementsByTagName(Js.string "slide")
 let n_slides = slides##length
 let current_frame = ref 0
-let event_list = ref ( [], 0,  [] ) 
+let event_list = ref ( [], 0,  [] )
 
+module OrdAnim=struct
+  type t=string
+  let compare:string->string->int = compare
+end
+
+		 
+		     
+module AnimData = Map.Make (OrdAnim)
+let ( +> ) database animation= let open Timeline in
+			       AnimData.add animation.name animation database
+			   
+let animator = AnimData.empty +> Atmospheric.animation 
+let null_animation =
+  let nothing status element = () in
+  Timeline.{name = "nothing"; run=nothing; step =nothing; suspend = nothing }
+
+	     
+	     
+let animator s =  try AnimData.find s animator with
+		  |Not_found -> null_animation
+		     
 let advance_events () = 
   let past, present, futur = !event_list in
-  let past,futur = Timeline.flow_event_to past (present+1) futur (<=) Timeline.apply_event in
+  let apply = Timeline.apply_event animator in
+  let past,futur = Timeline.flow_event_to past (present+1) futur (<=) apply in
   event_list := past, present+1, futur
 				   
 let reverse_events () = 
   let past, present, futur = !event_list in
-  let futur,past = Timeline.flow_event_to futur (present-1) past (>) Timeline.reverse_event in
+  let apply = Timeline.reverse_event animator in
+  let futur,past = Timeline.flow_event_to futur (present-1) past (>) apply in
   event_list := past, present-1, futur
 
 				   
@@ -155,12 +168,13 @@ let keyboard_action key handler=
 
 
 let centerT () =
-  let targets = document##querySelectorAll(Js.string "[centered]") in
-  let center node = 		
+  let targets = document##querySelectorAll(Js.string "[center]") in
+  let center node =
     let centering = Dom_html.createDiv document in
-    centering##classList##add(Js.string "centering");
+    node##removeAttribute(Js.string "center");
+    centering##classList##add(Js.string "centered");
     encapsulate centering node |> ignore in
-  Utils.node_consume targets center 
+  Utils.node_iter targets center 
 		
 let () = 
   let slides = prepare_slides slides in

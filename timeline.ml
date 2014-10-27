@@ -48,14 +48,23 @@ let unexpected c s =
   | None -> unexpected_end s
   | Some c -> unexpected_char c s
 
+let arity_error k =
+  parse_error @@ Printf.sprintf "No known action of arity %d " k  
+
+			       
+let unknown_action s =
+  parse_error @@ Printf.sprintf "Unknown action %s " s  
+
+			      
 type interval = 
  | Interval of int*int 
  | Point of int 
  | Right of int
 
-type tag = string
+type action = Tag of string | Run of string | Suspend of string | Step of string
 
-type signal = { domain : interval list ; tags : tag list }
+	     
+type signal = { domain : interval list ; actions : action list }
 let default_tag = "activate"
 
 
@@ -65,10 +74,15 @@ let print signals=
     | Point p -> sp "Point %d" p
     | Interval (s,e) -> sp "Interval %d-%d" s e
     | Right r -> sp "Right %d.." r in
-  let sprint_intervals is = is |> List.map sprint_interval   |> String.concat "+" in  
-  let sprint_tags tags = String.concat "," tags in
+  let sprint_intervals is = is |> List.map sprint_interval   |> String.concat "+" in
+  let sprint_action = function
+    | Tag s -> sp "Tag[%s]" s
+    | Run s -> sp "Run[%s]" s
+    | Step s-> sp "Step[%s]" s
+    | Suspend s -> sp "Suspend s" in
+  let sprint_tags actions = String.concat "," (List.map sprint_action actions) in
   let print_signal s =
-    let s = Printf.sprintf "Times:[%s], tags:[%s]" (sprint_intervals s.domain) (sprint_tags s.tags) in
+    let s = Printf.sprintf "Times:[%s], tags:[%s]" (sprint_intervals s.domain) (sprint_tags s.actions) in
     window##alert(Js.string s ) in  
   List.iter print_signal signals 
 
@@ -84,8 +98,8 @@ let parse s =
   let ( >>> ) f g=  let a= f ()  in g a in    
   let rec parse_timeline ()=  parse_signal |>|  parse_union
   and parse_signal () =
-    parse_tags >>> ( fun tags -> 
-     { tags; domain = parse_timegroup() } 
+    parse_actions >>> ( fun actions -> 
+     { actions; domain = parse_timegroup() } 
     ) 
   and parse_timegroup () = match token () with
     | Some('[') -> parse_time_list () 
@@ -95,16 +109,25 @@ let parse s =
     | Some('+') -> parse_time_list () 
     | Some(']') -> []
     | c  -> unexpected c "time interval list"
-  and parse_tags () = match token () with
-    | Some('[') |Some ( '0'..'9' ) -> undo(); [default_tag]
-    | _ -> undo();  parse_tag (Buffer.create 20) |>| parse_tags_queue 
-  and parse_tag b ()= match token() with
-    | Some('a'..'z' as c ) -> Buffer.add_char b c; parse_tag b () 
-    | Some('+') -> undo(); Buffer.contents b
-    | Some(':') -> undo(); Buffer.contents b
-    | c -> unexpected c "tag"    
-  and parse_tags_queue () = match token () with
-    | Some('+') -> parse_tags()
+  and parse_actions () = match token () with
+    | Some('[') |Some ( '0'..'9' ) -> undo(); [Tag default_tag]
+    | _ -> undo();  parse_action (Buffer.create 20) |>| parse_actions_queue 
+  and parse_action b ()= match token() with
+    | Some('+') -> undo(); parse_action_f @@ Buffer.contents b
+    | Some(':') -> undo(); parse_action_f @@ Buffer.contents b
+    | Some( c ) -> Buffer.add_char b c; parse_action b () 
+    | c -> unexpected c "tag"
+  and parse_action_f s = match Utils.split_string ' ' s with
+    | [a] -> Tag a
+    | [a;b] -> ( match a with
+		 | "run" -> Run b
+		 | "suspend" -> Suspend b
+		 | "step" -> Step b
+		 | "tag" -> Tag b
+		 |  _ -> unknown_action a ) 
+    | q -> arity_error @@ List.length q  
+  and parse_actions_queue () = match token () with
+    | Some('+') -> parse_actions()
     | Some(':') -> []
     | c -> unexpected c "tag queue" 
   and parse_interval () = (parse_int 0) >>> parse_r_interval
@@ -142,26 +165,34 @@ List.fold_left (fun u i -> max u @@ upper i ) 0 is
 
 	       
 type status = Activate| Desactivate
+				  
 
+type  event = {time:int; status:status; ev_actions : action list;  node: Dom_html.element Js.t}
 
-type  event = {time:int;action:status; ev_tags : tag list;  node: Dom_html.element Js.t}
+type animation_signal =  status -> Dom_html.element Js.t -> unit 		
+		
+type animation = {
+  name : string;
+  run : animation_signal;
+  step : animation_signal;
+  suspend: animation_signal; 
+}
 
+type animator = string -> animation
+		   
+		
 let jtime = Js.string "timeline"
-let jdis = Js.string "disactivated"
-let jact = Js.string "activated"
-
-
 
 let construct_chronology slide= 
-  let blink n ev_tags start ending events = 
-    {time=ending+1; action=Desactivate; ev_tags; node  = n }
-    ::{time = start; action=Activate; ev_tags;  node = n} :: events in
-  let add_interval n tags events = function 
-    | Point p -> blink n tags p p events
-    | Interval (s,e) -> blink n tags s e events
-    | Right s -> {time=s;action=Activate; ev_tags= tags; node = n} ::events in
+  let blink n ev_actions start ending events = 
+    {time=ending+1; status=Desactivate; ev_actions; node  = n }
+    ::{time = start; status=Activate; ev_actions;  node = n} :: events in
+  let add_interval n ev_actions events = function 
+    | Point p -> blink n ev_actions p p events
+    | Interval (s,e) -> blink n ev_actions s e events
+    | Right s -> {time=s;status=Activate; ev_actions; node = n} ::events in
   let add_signal n events (signal:signal) = 
-    List.fold_left (add_interval n signal.tags) events signal.domain in
+    List.fold_left (add_interval n signal.actions) events signal.domain in
   let add_timeline n attr events  = 
     let timeline = parse @@ Js.to_string attr in
     List.fold_left (add_signal n) events timeline in
@@ -184,11 +215,24 @@ let marker_on tag =
 let marker_off tag =
   Js.string( tml_marker ^ tag ^ "_off") 
 
-let tags signals=
-  let fold_sign tags signal =  List.fold_left (fun  l x -> x::l) tags signal.tags  in
+let filter_kind base_filter signals = 
+  let fold_sign tags signal =  List.fold_left base_filter tags signal.actions  in
   signals
   |> List.fold_left fold_sign []
   |> List.sort_uniq (compare:string->string->int) 
+
+		    
+let tags signals=
+  let add_if_tag l = function
+    | Tag t -> t::l
+    | _ -> l in
+  filter_kind add_if_tag signals
+
+let runs signals =
+  let add_if_run l = function
+    | Run t -> t::l
+    | _ -> l in
+  filter_kind add_if_run signals
 		    
 
 let prepare_events_tags slide  =
@@ -206,9 +250,13 @@ let clear_status slide =
   let clear element attr = 
     let cl = element##classList in
     Utils.classes_consume cl ( clear_cl cl) in
-  Utils.iter_attribute jtime clear slide  
+  Utils.iter_attribute jtime clear slide 
 
-				  
+let reset_animations animator slide  =
+  let stop element attr =
+    attr |> Js.to_string |>  parse |> runs |> List.iter (fun name -> (animator name).run Desactivate element) in
+  Utils.iter_attribute jtime stop slide
+		       
 let flow_event_to past target future test action = 
   let rec move past = function 
     | [] -> past, []
@@ -222,7 +270,7 @@ let reverse_action = function
 
 let apply_tag_event e tag  =
   let cl = e.node##classList in 
-  match e.action with
+  match e.status with
   | Activate  -> (
      cl##add(marker_on tag);
      cl##remove(marker_off tag) ) 
@@ -231,8 +279,16 @@ let apply_tag_event e tag  =
      cl##add(marker_off tag)
   )
 
-let apply_event e =
-  List.iter (apply_tag_event e) e.ev_tags
+let apply_anim_event animator e=
+  let eval f = f e.status e.node in
+  function
+  | Run a -> eval (animator a).run
+  | Step a ->  eval (animator a).step
+  | Suspend a -> eval (animator a).suspend
+  | Tag a -> apply_tag_event e a				      
+
+let apply_event animator e =
+  List.iter (apply_anim_event animator e) e.ev_actions
 
 	   
-let reverse_event e = apply_event { e with action = reverse_action e.action } 
+let reverse_event animator e = apply_event animator { e with status = reverse_action e.status } 
