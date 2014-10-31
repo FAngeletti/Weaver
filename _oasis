@@ -1,0 +1,19 @@
+OASISFormat: 0.4
+Name:        Weaver
+Version:     0.1
+Synopsis:    Html5 presentation library
+Authors:     Florian Angeletti
+License:     GPL
+Plugins:     META (0.4)
+
+Library weaver
+  Path:       src
+  BuildTools: ocamlbuild
+  Pack:       true
+  BuildDepends: js_of_ocaml, js_of_ocaml.syntax
+  Modules:    Consts, Plot, Timeline, Decorations, Slides, Utils, Engine
+  
+Document "Themes"
+  Title:      Weaver themes
+  InstallDir: $docdir
+  

@@ -1,7 +1,14 @@
 
 let window = Js.Unsafe.variable "window"
 let document = Dom_html.document
-					       
+
+(** *)
+let seq_ x fs = List.iter (fun f -> f x) fs 
+
+(** Html_element manipulation *)
+let add_class c element  = element##classList##add(Js.string c) ; element   
+
+		 
 (** Iteration on nodelist or classlist *)
 let nodelike_iter extract nl f = 
   let n = nl##length in
@@ -76,6 +83,13 @@ let iter_attribute attr f origin =
   let rec children node = node_f node; node_iter (node##childNodes) children in
   children origin
 
+
+(**Conditionnal function *)
+ let may f = function
+  | Some x-> f x
+  | None -> ()
+
+ 
 	   
 (** Dom manipulation *)
 let get_or_create name =

@@ -264,7 +264,7 @@ let flow_event_to past target future test action =
     | l -> past, l in
   move past future
 
-let reverse_action = function 
+let reverse_status = function 
   | Activate -> Desactivate
   | Desactivate -> Activate 
 
@@ -291,4 +291,4 @@ let apply_event animator e =
   List.iter (apply_anim_event animator e) e.ev_actions
 
 	   
-let reverse_event animator e = apply_event animator { e with status = reverse_action e.status } 
+let reverse_event animator e = apply_event animator { e with status = reverse_status e.status } 

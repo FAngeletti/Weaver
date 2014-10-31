@@ -1,0 +1,208 @@
+body{
+	margin:0; padding:0;
+	font-size:200%;
+	max-height:100%;
+	overflow:hidden;
+}
+
+
+
+section{
+	margin:0; padding:0;
+	
+}
+
+.unfocused{
+	display:none;
+}
+
+
+
+
+ul{
+margin:0;
+list-style-image:url(images/Sphere.png);
+}
+
+ul ul{
+list-style-image:url(images/SphereSmall.png);
+}
+
+ul .tmln_alert_on{
+	list-style-image:url(images/SphereAlert.png);
+}
+
+
+.tmln_activate_off {
+	opacity:0.1;
+}
+
+ul li{
+/*	margin-bottom:0.5em;
+	margin-left:4em;
+*/	
+}
+ 
+
+
+
+/*
+div .bicolumn{
+	-webkit-column-count:2;
+	-moz-column-count:2;
+	column-count:2;
+
+	-webkit-column-gap:1em;
+	-moz-column-gap:1em;
+	column-gap:1em;
+}
+*/
+
+
+
+.frontpage>div>h1{
+	color:white;
+	background:navy;
+	padding:1em;
+	margin: 2em auto;
+	border-radius: 50px;
+	box-shadow : 2px 2px 20px black;
+	font-size:150%;
+
+}
+
+
+
+ .slide > h1  {
+	font-size:150%;
+	margin:0em;
+
+	padding-left:2em;
+	padding-bottom:0.3em;
+	background:navy;
+
+	color:white;
+
+	border-width:0px;
+	background-image:linear-gradient(to bottom,navy 75% ,white 100%);
+
+}
+
+
+
+h1 {
+	color:navy;
+}
+
+h2{
+	margin:0;
+	color:navy;
+}
+
+
+
+
+
+.centered {
+	margin:0em;
+	text-align:center;
+}
+
+
+
+
+.slide {
+
+	height:100%;
+	max-height:100%;
+	
+	
+}
+
+
+
+
+.slide_interior{
+	margin:auto;
+	width:80%;
+ 	height:90%;
+
+	display: -webkit-flex;
+	display: flex;
+	-webkit-flex-direction: column;
+	flex-direction: column;
+	-webkit-justify-content: space-around; 
+	justify-content: space-around;
+
+}
+
+
+
+
+
+columns{
+
+	display: -webkit-flex;
+	display: flex;
+	-webkit-flex-direction: row;
+	flex-direction: row;
+	-webkit-justify-content: space-between; 
+	justify-content: space-between;
+
+}
+
+
+
+
+
+
+box{	display:block;
+	margin:1em;
+	border-radius: 20px;
+	box-shadow : 10px 10px 20px gray;
+	background:rgb(240,240,255);
+	padding-bottom:0.25em;
+
+}
+
+
+
+box>h1{
+	margin:0;
+	color:white;
+	padding-left:0.5em;
+	border-top-right-radius: 20px;
+	border-top-left-radius: 20px;
+
+	
+	padding-bottom:0.3em;
+	background-image:linear-gradient(to bottom,navy 75% ,rgb(240,240,255) 100%);
+
+}
+
+ span .struct{
+	font-size:125%;	
+	color:navy;
+}
+
+.videoContainer{
+	display:inline-block;
+	position:relative;
+
+}
+
+.videoIndicator{
+	position:absolute;
+	top:10px;
+	left:2.5em;
+}
+
+.launched {
+	display:none;
+}
+
+img .w3{
+	width:200px;
+	height:200px;
+}
+
