@@ -4,13 +4,12 @@ open Consts
 								    
 
 let unfocused  = 
-  let unfocused = Dom_html.createDiv document |> Utils.add_class "unfocused" in
-  let () = Dom.appendChild root unfocused in
+  let unfocused = document##createElement(Js.string "section") |> Utils.add_class "unfocused" in
+  let () = Dom.appendChild body unfocused in
   unfocused
 
 let unfocus (element : #Dom.node Js.t)  = unfocused##appendChild((element :> Dom.node Js.t) )
-
-
+						   
 let slide_prepare slides = 
   Utils.node_consume slides ( fun n -> 
 			       n 

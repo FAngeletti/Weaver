@@ -1,6 +1,13 @@
 
+
 let document = Dom_html.document 
 
+let getRaws document =
+  document##getElementsByTagName(Js.string "slide")
+	  
+let get document =
+  document##querySelectorAll(".slide")
+	   
 let root =  Utils.get_or_create "html" 
 let body = Utils.get_or_create "body"
 

@@ -12,8 +12,4 @@ Library weaver
   Pack:       true
   BuildDepends: js_of_ocaml, js_of_ocaml.syntax
   Modules:    Consts, Plot, Timeline, Decorations, Slides, Utils, Engine
-  
-Document "Themes"
-  Title:      Weaver themes
-  InstallDir: $docdir
-  
+
