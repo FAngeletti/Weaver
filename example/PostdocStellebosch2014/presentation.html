@@ -1,0 +1,162 @@
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Statistical physics: a journey through randomness</title>
+	<link rel="stylesheet" href="../../themes/stellenbosch/style.css">
+	<link rel="stylesheet" href="style+.css">
+</head>
+ <body>
+
+
+<slide class="frontpage">
+
+<h1> Statistical physics:<br/> a journey through randomness </h1>
+<image center src="Images/nithep_logo.png"> </image> <br/> 
+<div class="centered"> 
+	Florian Angeletti <br/>
+	NITheP
+</div>
+
+</slide>
+
+<slide title="What is statistical physics?">
+<div>  <h2> The "rules" of physics </h2>
+ 
+<columns id=theories>
+ <div> Quantum mechanics <br/>(small scale) <br/> 
+<img css-width=25vw src="Images/D_orbitals.svg"> </img> 
+
+</div>
+ <div> Classical mechanics<br/> (medium scale) <br/> <img center css-width=15vw src="Images/waterdrop-small_4.jpg"> </img> </div>
+ <div id="gr"> General relativity <br/> (large scale) <br/> <img css-width=25vw src="Images/CMB_anisotropy.jpg"> </img> </div>
+</columns>
+</div>
+
+<columns>
+<img timeline="1.." css-width=40vw src="Images/chess.jpg"> </img>
+<div timeline="2..">
+<h2>Statistical physics:<br/> a strategy </h2>
+for system with very large number of particles
+</div>
+</columns>
+
+</slide>
+
+<slide title="The statistical strategy">
+<div>
+<h2> A room full of air </h2> <span> ~one octillion (100000000000000000000000000) molecules </span> 
+<columns>
+<canvas center css-width=50vm width=500 height=500 timeline="run atmospheric:0..+step atmospheric:[2..+3..]" id=atmospheric > </canvas>
+<ul> 
+	<li timeline="2..">One particle:<br/> hand computation</li>
+	<li timeline="3.."> 1000 particles:<br/> computer simulation </li>
+</ul>
+</columns>
+</div>
+<ul> <li timeline="4.." > Position of all molecules in the room ≈ 100000000 Google storage capacity </li> </ul>
+	
+
+</slide>
+
+<slide title="Asking the right questions" >
+
+<ul>
+	<li>How many particles in the front half of the room? </li> 
+</ul>
+<columns>
+<canvas center css-width=50vm width="400em" height="600ex" 
+timeline="run atmospheric_half:1..+step atmospheric_half:[2..+3..]" id=atmospheric_half > </canvas>
+<div>
+<ul timeline="2..">
+	<li> Either at the front or the back </li>
+	<li> Front or back: same probability </li> 
+	<li timeline="3.." > Add particles one by one </li>
+</ul>
+ </div>
+<columns>
+
+</slide>
+
+<slide title="Risk of spontaneous asphixia "  >
+<div>
+
+<canvas center css-width=50vm width="500em" height="500ex" timeline="run convergence:0.." id=convergence> </canvas>
+
+</div>
+<ul> 
+   </li>
+	<li>Typical fluctuation : 0.0000000000000001, 1part by quadrillion </li>
+	<li>No risk of spontaneous asphyxia</li>
+</ul>
+
+</slide>
+
+<slide title="Ant odyssey">
+
+<ul> 
+	<li> A lost ant lingers on a infinite plane </li>
+	<li> Every second, it takes a step in a random direction </li>
+</ul>
+
+<canvas css-width=80vw width="1000em" height="500ex" timeline="run markov2d:0..+step markov2d:1.." id=markov2d> </canvas>
+
+<columns>
+	<div>  Will it ever goes home?   </div>
+	<div timeline="2..">  <h2> Almost surely </h2> 
+(with an infinite amount of time ) </div>
+</columns>
+
+</slide>
+
+<slide title="A word of caution" >
+<ul> 
+	<li> Not true anymore for a flying ant</li>
+</ul>
+
+<canvas css-width=80vw width="1000em" height="500ex" timeline="run markov3d:0.." id=markov3d> </canvas>
+
+<ul>
+<li> Don't fly nor time travel when you are lost </li>
+</ul>
+
+</slide>
+
+
+<slide title="Through randomness">
+
+<image src="Schemes/strategy.svg" />
+
+
+<ul> 
+	<li > Pointless or meaningful? A difficult choice </li>
+	<li> Does time matter ? </li>
+</ul>
+
+
+
+</slide>
+
+
+<slide title="What do I work on?">
+
+<box> <h1> Traffic jam-like model </h1> 
+<canvas css-width=70vw width="1200em" height="200ex" timeline="run asep:0" id=asep> </canvas>
+</box>
+
+<box> <h1> Extreme events</h1>
+<ul> 
+	<li> What happens when the ant get lost forever? </li>
+	<li> How to predict millenial flood with only one century of data? </li> 
+</ul>
+</box>
+
+</slide>
+
+<slide title="Questions?" >
+<h2> Thank you for your attention </h2>
+
+</slide>
+
+</body> </html>
+
+<script src="main.js" > </script>
